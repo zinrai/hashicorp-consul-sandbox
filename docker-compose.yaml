@@ -1,0 +1,91 @@
+services:
+  consul-0:
+    image: hashicorp/consul:1.22
+    container_name: consul-0
+    hostname: consul-0
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config:/consul/config
+      - consul-0-data:/consul/data
+    ports:
+      - "127.0.0.1:8500:8500"
+    networks:
+      - consul-net
+    restart: unless-stopped
+
+  consul-1:
+    image: hashicorp/consul:1.22
+    container_name: consul-1
+    hostname: consul-1
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config:/consul/config
+      - consul-1-data:/consul/data
+    ports:
+      - "127.0.0.1:8501:8500"
+    networks:
+      - consul-net
+    restart: unless-stopped
+
+  consul-2:
+    image: hashicorp/consul:1.22
+    container_name: consul-2
+    hostname: consul-2
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config:/consul/config
+      - consul-2-data:/consul/data
+    ports:
+      - "127.0.0.1:8502:8500"
+    networks:
+      - consul-net
+    restart: unless-stopped
+
+  consul-3:
+    image: hashicorp/consul:1.22
+    container_name: consul-3
+    hostname: consul-3
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config:/consul/config
+      - consul-3-data:/consul/data
+    ports:
+      - "127.0.0.1:8503:8500"
+    networks:
+      - consul-net
+    restart: unless-stopped
+
+  consul-4:
+    image: hashicorp/consul:1.22
+    container_name: consul-4
+    hostname: consul-4
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config:/consul/config
+      - consul-4-data:/consul/data
+    ports:
+      - "127.0.0.1:8504:8500"
+    networks:
+      - consul-net
+    restart: unless-stopped
+
+networks:
+  consul-net:
+    driver: bridge
+
+volumes:
+  consul-0-data:
+  consul-1-data:
+  consul-2-data:
+  consul-3-data:
+  consul-4-data:
