@@ -1,91 +1,262 @@
+# hashicorp-consul-sandbox
+#
+# 5 servers (one Raft quorum) + 5 plain clients + 1 UI client, plus small
+# http-echo service backends. The substrate for rehearsing a Consul server
+# rolling upgrade. See README.md.
+#
+# Image versions are env vars. To roll the servers, set CONSUL_SERVER_IMAGE to the
+# target and recreate one node at a time, leader last; the clients stay on the old
+# version during the servers-first / clients-last skew window:
+#   CONSUL_SERVER_IMAGE     all servers share one (set to the target version to roll)
+#   CONSUL_CLIENT_IMAGE     all clients share one (pin for the skew window)
+
 services:
-  consul-0:
-    image: hashicorp/consul:1.22
-    container_name: consul-0
-    hostname: consul-0
+  # ---- servers: one Raft quorum, bootstrap_expect = 5 ----------------------
+  consul-server-0:
+    image: ${CONSUL_SERVER_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-server-0
+    hostname: consul-server-0
     command: agent
     environment:
       CONSUL_BIND_INTERFACE: eth0
     volumes:
-      - ./config:/consul/config
-      - consul-0-data:/consul/data
+      - ./config/server:/consul/config
+      - consul-server-0-data:/consul/data
     ports:
       - "127.0.0.1:8500:8500"
     networks:
-      - consul-net
-    restart: unless-stopped
+      consul-net:
+        ipv4_address: 172.28.0.10
 
-  consul-1:
-    image: hashicorp/consul:1.22
-    container_name: consul-1
-    hostname: consul-1
+  consul-server-1:
+    image: ${CONSUL_SERVER_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-server-1
+    hostname: consul-server-1
     command: agent
     environment:
       CONSUL_BIND_INTERFACE: eth0
     volumes:
-      - ./config:/consul/config
-      - consul-1-data:/consul/data
+      - ./config/server:/consul/config
+      - consul-server-1-data:/consul/data
     ports:
       - "127.0.0.1:8501:8500"
     networks:
-      - consul-net
-    restart: unless-stopped
+      consul-net:
+        ipv4_address: 172.28.0.11
 
-  consul-2:
-    image: hashicorp/consul:1.22
-    container_name: consul-2
-    hostname: consul-2
+  consul-server-2:
+    image: ${CONSUL_SERVER_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-server-2
+    hostname: consul-server-2
     command: agent
     environment:
       CONSUL_BIND_INTERFACE: eth0
     volumes:
-      - ./config:/consul/config
-      - consul-2-data:/consul/data
+      - ./config/server:/consul/config
+      - consul-server-2-data:/consul/data
     ports:
       - "127.0.0.1:8502:8500"
     networks:
-      - consul-net
-    restart: unless-stopped
+      consul-net:
+        ipv4_address: 172.28.0.12
 
-  consul-3:
-    image: hashicorp/consul:1.22
-    container_name: consul-3
-    hostname: consul-3
+  consul-server-3:
+    image: ${CONSUL_SERVER_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-server-3
+    hostname: consul-server-3
     command: agent
     environment:
       CONSUL_BIND_INTERFACE: eth0
     volumes:
-      - ./config:/consul/config
-      - consul-3-data:/consul/data
+      - ./config/server:/consul/config
+      - consul-server-3-data:/consul/data
     ports:
       - "127.0.0.1:8503:8500"
     networks:
-      - consul-net
-    restart: unless-stopped
+      consul-net:
+        ipv4_address: 172.28.0.13
 
-  consul-4:
-    image: hashicorp/consul:1.22
-    container_name: consul-4
-    hostname: consul-4
+  consul-server-4:
+    image: ${CONSUL_SERVER_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-server-4
+    hostname: consul-server-4
     command: agent
     environment:
       CONSUL_BIND_INTERFACE: eth0
     volumes:
-      - ./config:/consul/config
-      - consul-4-data:/consul/data
+      - ./config/server:/consul/config
+      - consul-server-4-data:/consul/data
     ports:
       - "127.0.0.1:8504:8500"
     networks:
-      - consul-net
-    restart: unless-stopped
+      consul-net:
+        ipv4_address: 172.28.0.14
+
+  # ---- plain clients: register services, share one image (skew pin) --------
+  # consul-client-1 also publishes DNS (8600) so the skew-window service-
+  # discovery probe can run from the host.
+  consul-client-0:
+    image: ${CONSUL_CLIENT_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-client-0
+    hostname: consul-client-0
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config/client:/consul/config
+      - ./config/services/client-0.hcl:/consul/config/services.hcl
+      - consul-client-0-data:/consul/data
+    ports:
+      - "127.0.0.1:8505:8500"
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.20
+
+  consul-client-1:
+    image: ${CONSUL_CLIENT_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-client-1
+    hostname: consul-client-1
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config/client:/consul/config
+      - ./config/services/client-1.hcl:/consul/config/services.hcl
+      - consul-client-1-data:/consul/data
+    ports:
+      - "127.0.0.1:8506:8500"
+      - "127.0.0.1:8600:8600/udp"
+      - "127.0.0.1:8600:8600/tcp"
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.21
+
+  consul-client-2:
+    image: ${CONSUL_CLIENT_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-client-2
+    hostname: consul-client-2
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config/client:/consul/config
+      - ./config/services/client-2.hcl:/consul/config/services.hcl
+      - consul-client-2-data:/consul/data
+    ports:
+      - "127.0.0.1:8507:8500"
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.22
+
+  consul-client-3:
+    image: ${CONSUL_CLIENT_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-client-3
+    hostname: consul-client-3
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config/client:/consul/config
+      - ./config/services/client-3.hcl:/consul/config/services.hcl
+      - consul-client-3-data:/consul/data
+    ports:
+      - "127.0.0.1:8508:8500"
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.23
+
+  consul-client-4:
+    image: ${CONSUL_CLIENT_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-client-4
+    hostname: consul-client-4
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config/client:/consul/config
+      - ./config/services/client-4.hcl:/consul/config/services.hcl
+      - consul-client-4-data:/consul/data
+    ports:
+      - "127.0.0.1:8509:8500"
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.24
+
+  # ---- UI client: observation only, no registered service ------------------
+  consul-client-ui:
+    image: ${CONSUL_CLIENT_IMAGE:-hashicorp/consul:1.21}
+    container_name: consul-client-ui
+    hostname: consul-client-ui
+    command: agent
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - ./config/ui:/consul/config
+      - consul-client-ui-data:/consul/data
+    ports:
+      - "127.0.0.1:8510:8500"
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.25
+
+  # ---- service backends: kill one to drive its check critical --------------
+  # web has three instances (consul-client-0..2); cache and api have one each.
+  web-0:
+    image: hashicorp/http-echo
+    container_name: web-0
+    command: ["-listen=:5678", "-text=web-0"]
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.30
+
+  web-1:
+    image: hashicorp/http-echo
+    container_name: web-1
+    command: ["-listen=:5678", "-text=web-1"]
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.31
+
+  web-2:
+    image: hashicorp/http-echo
+    container_name: web-2
+    command: ["-listen=:5678", "-text=web-2"]
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.32
+
+  cache-0:
+    image: hashicorp/http-echo
+    container_name: cache-0
+    command: ["-listen=:5678", "-text=cache-0"]
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.33
+
+  api-0:
+    image: hashicorp/http-echo
+    container_name: api-0
+    command: ["-listen=:5678", "-text=api-0"]
+    networks:
+      consul-net:
+        ipv4_address: 172.28.0.34
 
 networks:
   consul-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
 
 volumes:
-  consul-0-data:
-  consul-1-data:
-  consul-2-data:
-  consul-3-data:
-  consul-4-data:
+  consul-server-0-data:
+  consul-server-1-data:
+  consul-server-2-data:
+  consul-server-3-data:
+  consul-server-4-data:
+  consul-client-0-data:
+  consul-client-1-data:
+  consul-client-2-data:
+  consul-client-3-data:
+  consul-client-4-data:
+  consul-client-ui-data:
